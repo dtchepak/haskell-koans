@@ -7,10 +7,13 @@ module HaskellKoans.KoanBase
     KoanResult,
     assertBool,
     assertEqual,
+    runKoan, runKoans,
     doKoans
 ) where
 
 import Control.Exception as E
+import Control.Applicative
+import Control.Monad
 
 (???) :: a
 (???) = undefined
@@ -40,20 +43,30 @@ assertEqual msg expected actual =
 --runKoans (Koans name koans) = do
 --    putStrLn $ "Koans: " ++ name
 --    ks <- sequence koans
+--
+isPass :: KoanResult -> Bool
+isPass (Pass _) = True
+isPass (Fail _) = False
 
-runKoan :: Koan -> IO (String, KoanResult)
-runKoan (Koan name assert) = fmap (name,) assert
+runKoan :: Koan -> IO Bool
+runKoan (Koan name assert) = do
+    putStrLn name
+    result <- assert
+    print result
+    return . isPass $ result
 
-runKoans :: Koans -> (String, IO [(String, KoanResult)])
-runKoans (Koans name koans) = (name, mapM runKoan koans)
-
-doKoans :: Koans -> IO ()
-doKoans koans = do
-    let (name, runResult) = runKoans koans
-    results <- runResult
+--runKoans :: Koans -> IO ()
+runKoans (Koans name koans) = do
     putStrLn $ "Koans: " ++ name
-    mapM_ (\(s, r) -> putStrLn . show $ r) results
+    runUntilFail koans
 
+runUntilFail :: [Koan] -> IO ()
+runUntilFail [] = return ()
+runUntilFail (x:xs) = do
+    continue <- runKoan x
+    when continue $ runUntilFail xs
+
+doKoans = undefined
 
 --takeUpTo :: (a -> Bool) -> [a] -> [a]
 --takeUpTo pred list = fst . takeWhile (\(_, y) -> pred y) $ zip list (drop 1 list)
